@@ -1,4 +1,4 @@
-import sqlite3 from 'sqlite3';
+
 import pg from 'pg';
 import path from 'path';
 import fs from 'fs';
@@ -30,6 +30,7 @@ if (usePostgres) {
   });
 } else {
   console.log('Banco de dados: Conectando ao SQLite local...');
+  const sqlite3 = (await import('sqlite3')).default;
   const sqlite = sqlite3.verbose();
   sqliteDb = new sqlite.Database(dbPath, (err) => {
     if (err) {
