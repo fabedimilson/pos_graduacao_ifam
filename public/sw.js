@@ -37,6 +37,10 @@ self.addEventListener('fetch', (event) => {
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
 
+  // Do not cache non-http/https requests (e.g. chrome-extension://)
+  const url = new URL(event.request.url);
+  if (!url.protocol.startsWith('http')) return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
