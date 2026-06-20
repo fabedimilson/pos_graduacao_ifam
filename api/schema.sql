@@ -1,4 +1,4 @@
--- Schema SQL para o Banco de Dados Local (SQLite)
+-- Schema SQL para o Banco de Dados (SQLite e PostgreSQL Compatível)
 
 CREATE TABLE IF NOT EXISTS cursos (
   id TEXT PRIMARY KEY,
@@ -12,7 +12,12 @@ CREATE TABLE IF NOT EXISTS editais (
   titulo TEXT NOT NULL,
   tipo TEXT NOT NULL, -- 'Especialização' | 'Mestrado' | 'Doutorado'
   vagas INTEGER NOT NULL,
-  status TEXT NOT NULL, -- 'Aberto' | 'Homologação' | 'Finalizado'
+  vagasAmpla INTEGER NOT NULL DEFAULT 0,
+  vagasAfirmativas INTEGER NOT NULL DEFAULT 0,
+  vagasPcd INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL, -- 'Aberto' | 'Homologação' | 'Finalizado' | 'Em Andamento'
+  dataInicio TEXT NOT NULL DEFAULT '',
+  dataFim TEXT NOT NULL DEFAULT '',
   documentosExigidos TEXT NOT NULL, -- JSON array of strings
   barema TEXT NOT NULL -- JSON array of barema objects
 );
@@ -27,10 +32,11 @@ CREATE TABLE IF NOT EXISTS candidatos (
   cota TEXT NOT NULL, -- 'Ampla Concorrência' | 'Ações Afirmativas' | 'Pessoa com Deficiência (PcD)'
   documentos TEXT NOT NULL, -- JSON object mapping document name to {nomeArquivo, status, motivoRejeicao}
   pontuacaoBarema TEXT NOT NULL, -- JSON object mapping barema item to score
-  status TEXT NOT NULL, -- 'Inscrito' | 'Homologado' | 'Recusado' | 'Recurso Pendente'
+  status TEXT NOT NULL, -- 'Inscrito' | 'Homologado' | 'Recusado' | 'Recurso Pendente' | 'Aguardando Recurso'
   recursoDescricao TEXT,
   recursoStatus TEXT, -- 'Pendente' | 'Deferido' | 'Indeferido'
   recursoResposta TEXT,
+  recursoDataEnvio TEXT,
   FOREIGN KEY(editalId) REFERENCES editais(id)
 );
 
@@ -49,6 +55,7 @@ CREATE TABLE IF NOT EXISTS alunos (
   matricula TEXT NOT NULL,
   cursoId TEXT NOT NULL,
   cursoNome TEXT NOT NULL,
+  tccTitulo TEXT,
   status TEXT NOT NULL, -- 'Ativo' | 'Concluído' | 'Trancado'
   FOREIGN KEY(cursoId) REFERENCES cursos(id)
 );
@@ -60,7 +67,7 @@ CREATE TABLE IF NOT EXISTS eventos (
   data TEXT NOT NULL,
   cargaHoraria INTEGER NOT NULL,
   qrCodeUrl TEXT NOT NULL,
-  presencas TEXT NOT NULL -- JSON array of student IDs (alunos matriculados que registraram presença)
+  presencas TEXT NOT NULL -- JSON array of student IDs
 );
 
 CREATE TABLE IF NOT EXISTS certificado_config (
@@ -96,8 +103,10 @@ CREATE TABLE IF NOT EXISTS disciplinas (
   id TEXT PRIMARY KEY,
   cursoId TEXT NOT NULL,
   nome TEXT NOT NULL,
+  ementa TEXT NOT NULL DEFAULT '',
   cargaHoraria INTEGER NOT NULL,
   professorId TEXT, -- Professor alocado
+  professorNome TEXT, -- Nome do professor alocado
   cronograma TEXT NOT NULL,
   notas TEXT NOT NULL, -- JSON object mapping studentId to grade
   frequencias TEXT NOT NULL, -- JSON object mapping studentId to frequency

@@ -195,6 +195,52 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  // Fetch initial data from the database on mount
+  useEffect(() => {
+    const fetchDB = async () => {
+      try {
+        const resCursos = await fetch('/api/cursos');
+        if (resCursos.ok) {
+          const data = await resCursos.json();
+          if (data && data.length > 0) setCursos(data);
+        }
+        
+        const resEditais = await fetch('/api/editais');
+        if (resEditais.ok) {
+          const data = await resEditais.json();
+          if (data && data.length > 0) setEditais(data);
+        }
+
+        const resCandidatos = await fetch('/api/candidatos');
+        if (resCandidatos.ok) {
+          const data = await resCandidatos.json();
+          if (data && data.length > 0) setCandidatos(data);
+        }
+
+        const resSugestoes = await fetch('/api/sugestoes');
+        if (resSugestoes.ok) {
+          const data = await resSugestoes.json();
+          if (data && data.length > 0) setSugestoes(data);
+        }
+
+        const resInteresses = await fetch('/api/interesses');
+        if (resInteresses.ok) {
+          const data = await resInteresses.json();
+          if (data && data.length > 0) setInteresses(data);
+        }
+
+        const resEventos = await fetch('/api/eventos');
+        if (resEventos.ok) {
+          const data = await resEventos.json();
+          if (data && data.length > 0) setEventos(data);
+        }
+      } catch (err) {
+        console.warn('Não foi possível carregar dados do banco de dados (usando mocks):', err);
+      }
+    };
+    fetchDB();
+  }, []);
+
   // Update possibles courses when suggesting area changes
   useEffect(() => {
     const courses = bibliotecaCursosPorArea[sugArea];
@@ -240,6 +286,13 @@ export default function App() {
       nomeCurso: finalCourseName,
       data: new Date().toLocaleDateString('pt-BR')
     };
+
+    fetch('/api/sugestoes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSug)
+    }).catch(err => console.error('Erro ao salvar sugestão:', err));
+
     setSugestoes([newSug, ...sugestoes]);
     setSugNome('');
     setSugEmail('');
@@ -259,6 +312,13 @@ export default function App() {
       cursoNome: intCurso,
       data: new Date().toLocaleDateString('pt-BR')
     };
+
+    fetch('/api/interesses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newInt)
+    }).catch(err => console.error('Erro ao salvar interesse:', err));
+
     setInteresses([newInt, ...interesses]);
     setIntNome('');
     setIntEmail('');
@@ -299,6 +359,12 @@ export default function App() {
       status: 'Inscrito'
     };
 
+    fetch('/api/candidatos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCand)
+    }).catch(err => console.error('Erro ao salvar candidato:', err));
+
     setCandidatos([newCand, ...candidatos]);
     setSelectedCandidatoId(newCand.id);
     setCandNome('');
@@ -314,21 +380,30 @@ export default function App() {
     e.preventDefault();
     if (!recursoDescricao) return;
 
-    setCandidatos(candidatos.map(cand => {
+    const updatedCandidatos = candidatos.map(cand => {
       if (cand.id === selectedCandForRecurso) {
-        return {
+        const updated = {
           ...cand,
-          status: 'Aguardando Recurso',
+          status: 'Aguardando Recurso' as const,
           recurso: {
             descricao: recursoDescricao,
-            status: 'Pendente',
+            status: 'Pendente' as const,
             dataEnvio: new Date().toLocaleDateString('pt-BR')
           }
         };
+
+        fetch(`/api/candidatos/${cand.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        }).catch(err => console.error('Erro ao salvar recurso:', err));
+
+        return updated;
       }
       return cand;
-    }));
+    });
 
+    setCandidatos(updatedCandidatos);
     setRecursoDescricao('');
     setRecursoSuccessMsg(true);
     setTimeout(() => setRecursoSuccessMsg(false), 5000);
@@ -359,6 +434,12 @@ export default function App() {
       disciplinas: []
     };
 
+    fetch('/api/cursos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newCurso)
+    }).catch(err => console.error('Erro ao criar curso:', err));
+
     setCursos([...cursos, newCurso]);
     setNewCourseNome('');
     setNewCourseDesc('');
@@ -386,6 +467,12 @@ export default function App() {
       barema: newEditalBarema
     };
 
+    fetch('/api/editais', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newEd)
+    }).catch(err => console.error('Erro ao criar edital:', err));
+
     setEditais([...editais, newEd]);
     setNewEditalTitulo('');
     setNewEditalBarema([{ item: 'Carta de Intenção', pontuacaoMaxima: 50, obrigatorio: true }]);
@@ -404,6 +491,12 @@ export default function App() {
           ...c,
           disciplinas: c.disciplinas.map(d => {
             if (d.id === allocDiscipId) {
+              fetch(`/api/disciplinas/${d.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ professorId: prof.id, professorNome: prof.nome })
+              }).catch(err => console.error('Erro ao alocar professor:', err));
+
               return { ...d, professorId: prof.id, professorNome: prof.nome };
             }
             return d;
@@ -432,6 +525,19 @@ export default function App() {
       frequencias: {}
     };
 
+    fetch('/api/disciplinas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: newD.id,
+        cursoId: ementaCursoId,
+        nome: newD.nome,
+        ementa: newD.ementa,
+        cargaHoraria: newD.cargaHoraria,
+        cronograma: newD.cronograma
+      })
+    }).catch(err => console.error('Erro ao criar disciplina:', err));
+
     setCursos(cursos.map(c => {
       if (c.id === ementaCursoId) {
         return { ...c, disciplinas: [...c.disciplinas, newD] };
@@ -454,30 +560,40 @@ export default function App() {
 
   const handleConfirmRejectDoc = () => {
     if (!rejectingDocCandId || !rejectingDocKey) return;
-    setCandidatos(candidatos.map(c => {
+    const updatedCandidatos = candidatos.map(c => {
       if (c.id === rejectingDocCandId) {
-        return {
+        const updated = {
           ...c,
           documentos: {
             ...c.documentos,
             [rejectingDocKey]: {
               ...c.documentos[rejectingDocKey],
-              status: 'Recusado',
+              status: 'Recusado' as const,
               motivoRecusa: rejectMotivo || 'Documento incorreto ou fora dos padrões solicitados'
             }
           },
-          status: 'Indeferido'
+          status: 'Indeferido' as const
         };
+
+        fetch(`/api/candidatos/${c.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        }).catch(err => console.error('Erro ao recusar documento:', err));
+
+        return updated;
       }
       return c;
-    }));
+    });
+
+    setCandidatos(updatedCandidatos);
     setRejectingDocCandId(null);
     setRejectingDocKey(null);
   };
 
   // Approve a document
   const approveDoc = (candId: string, docKey: string) => {
-    setCandidatos(candidatos.map(c => {
+    const updatedCandidatos = candidatos.map(c => {
       if (c.id === candId) {
         const updatedDocs = {
           ...c.documentos,
@@ -487,16 +603,25 @@ export default function App() {
             motivoRecusa: undefined
           }
         };
-        // Check if all approved
         const allApproved = Object.values(updatedDocs).every(d => d.status === 'Aprovado');
-        return {
+        const updated = {
           ...c,
           documentos: updatedDocs,
-          status: allApproved ? 'Homologado' : c.status
+          status: (allApproved ? 'Homologado' : c.status) as any
         };
+
+        fetch(`/api/candidatos/${c.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        }).catch(err => console.error('Erro ao aprovar documento:', err));
+
+        return updated;
       }
       return c;
-    }));
+    });
+
+    setCandidatos(updatedCandidatos);
   };
 
   // Judge Recurso (Appeal)
@@ -509,12 +634,11 @@ export default function App() {
   const handleConfirmJudgeRecurso = () => {
     if (!judgingRecursoCandId) return;
 
-    setCandidatos(candidatos.map(c => {
+    const updatedCandidatos = candidatos.map(c => {
       if (c.id === judgingRecursoCandId) {
         const isDeferido = recursoDecisao === 'Deferido';
         const updatedDocs = { ...c.documentos };
         
-        // If deferido, mark all rejected docs as approved
         if (isDeferido) {
           Object.keys(updatedDocs).forEach(k => {
             if (updatedDocs[k].status === 'Recusado') {
@@ -524,37 +648,56 @@ export default function App() {
           });
         }
 
-        return {
+        const updated = {
           ...c,
           documentos: updatedDocs,
-          status: isDeferido ? 'Homologado' : 'Indeferido',
+          status: (isDeferido ? 'Homologado' : 'Indeferido') as any,
           recurso: c.recurso ? {
             ...c.recurso,
-            status: recursoDecisao,
+            status: recursoDecisao as any,
             respostaCoordenador: recursoRespostaText || `Recurso analisado e ${recursoDecisao.toLowerCase()} pela comissão.`
           } : undefined
         };
+
+        fetch(`/api/candidatos/${c.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        }).catch(err => console.error('Erro ao julgar recurso:', err));
+
+        return updated;
       }
       return c;
-    }));
+    });
 
+    setCandidatos(updatedCandidatos);
     setJudgingRecursoCandId(null);
   };
 
   // Launch barema scores for candidate
   const setCandidateBaremaScore = (candId: string, itemKey: string, score: number) => {
-    setCandidatos(candidatos.map(c => {
+    const updatedCandidatos = candidatos.map(c => {
       if (c.id === candId) {
-        return {
+        const updated = {
           ...c,
           pontuacaoBarema: {
             ...c.pontuacaoBarema,
             [itemKey]: score
           }
         };
+
+        fetch(`/api/candidatos/${c.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        }).catch(err => console.error('Erro ao atualizar barema:', err));
+
+        return updated;
       }
       return c;
-    }));
+    });
+
+    setCandidatos(updatedCandidatos);
   };
 
   // Teacher save grades and frequency
@@ -565,6 +708,15 @@ export default function App() {
         ...c,
         disciplinas: c.disciplinas.map(d => {
           if (d.id === teacherSelectedDiscip) {
+            fetch(`/api/disciplinas/${d.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                notas: { ...d.notas, ...gradesInput },
+                frequencias: { ...d.frequencias, ...freqInput }
+              })
+            }).catch(err => console.error('Erro ao salvar notas/frequências:', err));
+
             return {
               ...d,
               notas: { ...d.notas, ...gradesInput },
@@ -601,14 +753,20 @@ export default function App() {
           if (i === 0) return; // skip header
           const parts = line.split(',');
           if (parts.length >= 3) {
-            newSugs.push({
+            const s = {
               id: 'sug-csv-' + i + '-' + Math.random().toFixed(0),
               nomeCandidato: parts[0].trim(),
               email: parts[1].trim(),
               areaConhecimento: 'Engenharias e Tecnologia',
               nomeCurso: parts[2].trim(),
               data: new Date().toLocaleDateString('pt-BR')
-            });
+            };
+            newSugs.push(s);
+            fetch('/api/sugestoes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(s)
+            }).catch(err => console.error('Erro ao salvar sugestão importada:', err));
           }
         });
         setSugestoes([...newSugs, ...sugestoes]);
@@ -618,21 +776,27 @@ export default function App() {
           if (i === 0) return; // skip header
           const parts = line.split(',');
           if (parts.length >= 4) {
-            newCands.push({
+            const c = {
               id: 'cand-csv-' + i,
               editalId: 'ed-spec-2026',
               editalTitulo: 'Edital 01/2026 - Especialização em Ensino de Ciências e Tecnologias (CMC)',
               nome: parts[0].trim(),
               email: parts[1].trim(),
               cpf: parts[2].trim(),
-              cota: 'Ampla Concorrência',
+              cota: 'Ampla Concorrência' as const,
               documentos: {
-                'RG e CPF': { nomeArquivo: 'csv_upload.pdf', status: 'Aprovado' },
-                'Diploma de Graduação': { nomeArquivo: 'csv_diploma.pdf', status: 'Aprovado' }
+                'RG e CPF': { nomeArquivo: 'csv_upload.pdf', status: 'Aprovado' as const },
+                'Diploma de Graduação': { nomeArquivo: 'csv_diploma.pdf', status: 'Aprovado' as const }
               },
               pontuacaoBarema: {},
-              status: 'Homologado'
-            });
+              status: 'Homologado' as const
+            };
+            newCands.push(c);
+            fetch('/api/candidatos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(c)
+            }).catch(err => console.error('Erro ao salvar candidato importado:', err));
           }
         });
         setCandidatos([...newCands, ...candidatos]);
@@ -2835,6 +2999,50 @@ export default function App() {
         <p className="mt-1">Campus Manaus Centro | Pós-Graduação Lato e Stricto Sensu</p>
         <p className="mt-1 text-[10px] text-text-muted">Desenvolvido no Campus Manaus Centro</p>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="mobile-bottom-nav">
+        <a 
+          href="#" 
+          className={`mobile-bottom-nav__item ${activeTab === 'inicio' ? 'active' : ''}`}
+          onClick={() => setActiveTab('inicio')}
+        >
+          <GraduationCap className="h-5 w-5" />
+          <span>Início</span>
+        </a>
+        <a 
+          href="#programas" 
+          className={`mobile-bottom-nav__item ${activeTab === 'cursos' ? 'active' : ''}`}
+          onClick={() => setActiveTab('cursos')}
+        >
+          <BookOpen className="h-5 w-5" />
+          <span>Cursos</span>
+        </a>
+        <a 
+          href="#editais" 
+          className={`mobile-bottom-nav__item ${activeTab === 'editais' ? 'active' : ''}`}
+          onClick={() => setActiveTab('editais')}
+        >
+          <Award className="h-5 w-5" />
+          <span>Editais</span>
+        </a>
+        <a 
+          href="#eventos" 
+          className={`mobile-bottom-nav__item ${activeTab === 'eventos' ? 'active' : ''}`}
+          onClick={() => setActiveTab('eventos')}
+        >
+          <QrCode className="h-5 w-5" />
+          <span>Eventos</span>
+        </a>
+        <a 
+          href="#contato" 
+          className={`mobile-bottom-nav__item ${activeTab === 'contato' ? 'active' : ''}`}
+          onClick={() => setActiveTab('contato')}
+        >
+          <Mail className="h-5 w-5" />
+          <span>Contato</span>
+        </a>
+      </div>
     </div>
   );
 }

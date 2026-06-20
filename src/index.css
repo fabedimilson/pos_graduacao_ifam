@@ -1360,3 +1360,64 @@ tr:hover td {
     display: flex;
   }
 }
+
+/* --- Mobile Bottom Tab Bar Navigation --- */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: var(--bg-card);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 100;
+  box-sizing: border-box;
+}
+
+.mobile-bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-decoration: none;
+  width: 20%;
+  height: 100%;
+  gap: 0.2rem;
+  transition: var(--transition);
+}
+
+.mobile-bottom-nav__item svg {
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.mobile-bottom-nav__item:hover,
+.mobile-bottom-nav__item.active {
+  color: var(--primary);
+}
+
+.mobile-bottom-nav__item.active svg {
+  color: var(--primary);
+  transform: translateY(-2px);
+}
+
+/* Hide on desktop, show only on mobile */
+@media (min-width: 768px) {
+  .mobile-bottom-nav {
+    display: none;
+  }
+}
+
+/* Add padding offset to body when mobile nav is active to prevent overlap */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 64px !important;
+  }
+}
