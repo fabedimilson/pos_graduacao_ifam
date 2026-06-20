@@ -1421,3 +1421,28 @@ tr:hover td {
     padding-bottom: 64px !important;
   }
 }
+
+/* Mobile responsive adjustments for header and portals */
+@media (max-width: 580px) {
+  .fixed-header {
+    padding: 0 0.75rem;
+    height: 64px;
+  }
+  .app-container {
+    padding-top: 64px;
+  }
+  .fixed-header select {
+    max-width: 130px;
+    font-size: 0.75rem;
+  }
+  .fixed-header span.font-heading {
+    font-size: 0.9rem;
+  }
+  .fixed-header .badge {
+    display: none !important;
+  }
+  .fixed-header .flex.items-center.gap-2 {
+    gap: 0.25rem;
+  }
+}
+
